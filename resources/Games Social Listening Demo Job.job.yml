@@ -1,0 +1,58 @@
+resources:
+  jobs:
+    Games_Social_Listening_Demo_Job:
+      name: ${var.prefix} - Games Social Listening Demo Job
+      schedule:
+        quartz_cron_expression: 17 0 8 * * ?
+        timezone_id: America/New_York
+        pause_status: PAUSED
+      tasks:
+        - task_key: pull_source_content
+          notebook_task:
+            notebook_path: ../src/Abstracted_Ingestion.ipynb
+            base_parameters:
+              updateType: REFRESH
+            source: WORKSPACE
+        - task_key: sentiment-extraction
+          depends_on:
+            - task_key: pull_source_content
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.Games_Social_Listening_Demo_Pipeline.id}
+            full_refresh: false
+        - task_key: new_game_check
+          depends_on:
+            - task_key: sentiment-extraction
+          condition_task:
+            op: EQUAL_TO
+            left: "{{job.parameters.update_type}}"
+            right: NEW_GAME
+        - task_key: summary_report_gen
+          depends_on:
+            - task_key: new_game_check
+              outcome: "true"
+          notebook_task:
+            notebook_path: ../src/03_Weekly_Report_Generator.ipynb
+            source: WORKSPACE
+        - task_key: refresh_dashboard
+          depends_on:
+            - task_key: sentiment-extraction
+          dashboard_task:
+            subscription: {}
+            warehouse_id: ${var.warehouse_id}
+            dashboard_id: ${resources.dashboards.social_listening_dashboard.id}
+      queue:
+        enabled: true
+      parameters:
+        - name: source_content_id
+          default: com.nianticlabs.pokemongo
+        - name: content_type
+          default: Google Play Review
+        - name: game_name
+          default: Pokemon Go
+        - name: update_type
+          default: NEW_GAME 
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: ${var.schema}
+      performance_target: PERFORMANCE_OPTIMIZED

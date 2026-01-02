@@ -1,0 +1,11 @@
+resources:
+  pipelines:
+    Games_Social_Listening_Demo_Pipeline:
+      name: ${var.prefix} - Games Social Listening Demo Pipeline
+      libraries:
+        - glob:
+            include: ../src/Games Social Listening Demo Pipeline/transformations/**
+      serverless: true
+      catalog: ${var.catalog}
+      schema: ${var.schema}
+      root_path: ../src/Games Social Listening Demo Pipeline

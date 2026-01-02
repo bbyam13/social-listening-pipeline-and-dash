@@ -1,0 +1,2303 @@
+{
+  "datasets": [
+    {
+      "name": "796257f9",
+      "displayName": "Reviews",
+      "queryLines": [
+        "SELECT\n",
+        "  *\n",
+        "FROM\n",
+        " feedback_content_gold\n",
+        "WHERE (array_contains(:content_type, content_type) or array_contains(:content_type, 'All'))\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "content_type",
+          "keyword": "content_type",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "All"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "f7c0e188",
+      "displayName": "Param: SubTopic Filter",
+      "queryLines": [
+        "select\n",
+        "  \"Top 10\" as title,\n",
+        "  10 as limit\n",
+        "union all\n",
+        "select\n",
+        "  \"Top 25\",\n",
+        "  25"
+      ]
+    },
+    {
+      "name": "ae839f8f",
+      "displayName": "Review & Sentiment",
+      "queryLines": [
+        "select\n",
+        "  content.game_name,\n",
+        "  content.ai_summary,\n",
+        "  content.content_text,\n",
+        "  content.content_type,\n",
+        "  content.translated_content_text,\n",
+        "  content.overall_sentiment,\n",
+        "  content.timestamp,\n",
+        "  sentiment.sentiment,\n",
+        "  sentiment.category,\n",
+        "  sentiment.sub_category\n",
+        "from\n",
+        "  feedback_content_sentiment_gold as sentiment\n",
+        "    inner join feedback_content_gold as content\n",
+        "      on sentiment.content_id = content.content_id\n",
+        "      and sentiment.game_name = content.game_name\n",
+        "WHERE (array_contains(:content_type, content.content_type) or array_contains(:content_type, 'All'))"
+      ],
+      "parameters": [
+        {
+          "displayName": "content_type",
+          "keyword": "content_type",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "All"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "38128c95",
+      "displayName": "Param: Content Type",
+      "queryLines": [
+        "SELECT DISTINCT\n",
+        "  content_type\n",
+        "FROM\n",
+        " feedback_content_gold"
+      ]
+    },
+    {
+      "name": "934739a7",
+      "displayName": "Top 5 Negative Categories",
+      "queryLines": [
+        " select\n",
+        "  sentiment.category,\n",
+        "  count(*) as num_neg_contents\n",
+        "from\n",
+        "  feedback_content_sentiment_gold sentiment\n",
+        "    inner join feedback_content_gold as content\n",
+        "      on sentiment.content_id = content.content_id\n",
+        "where\n",
+        "  sentiment.sentiment = \"negative\"\n",
+        "  and (array_contains(:content_type, content.content_type) or array_contains(:content_type, 'All'))\n",
+        "  and sentiment.game_name = :game_name\n",
+        "  and content.timestamp >= :date_range.min\n",
+        "  and content.timestamp <= :date_range.max\n",
+        "group by\n",
+        "  sentiment.category\n",
+        "order by\n",
+        "  count(*) desc\n",
+        "limit 5"
+      ],
+      "parameters": [
+        {
+          "displayName": "game_name",
+          "keyword": "game_name",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "Palia"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "date_range",
+          "keyword": "date_range",
+          "dataType": "DATE",
+          "complexType": "RANGE",
+          "defaultSelection": {
+            "range": {
+              "dataType": "DATE",
+              "min": {
+                "value": "now/y"
+              },
+              "max": {
+                "value": "now/y"
+              }
+            }
+          }
+        },
+        {
+          "displayName": "content_type",
+          "keyword": "content_type",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "Steam Review"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "d93acedf",
+      "displayName": "Param: Category",
+      "queryLines": [
+        "select\n",
+        "  category\n",
+        "from\n",
+        "  feedback_content_sentiment_gold\n",
+        "group by\n",
+        "  category"
+      ]
+    },
+    {
+      "name": "ce82824a",
+      "displayName": "Top SubTopics By Cat",
+      "queryLines": [
+        "with x as (\n",
+        "  select\n",
+        "    count(*) as num_of_contents,\n",
+        "    sentiment.sub_category\n",
+        "  from\n",
+        "   feedback_content_sentiment_gold sentiment\n",
+        "    inner join feedback_content_gold as content\n",
+        "      on sentiment.content_id = content.content_id\n",
+        "  where\n",
+        "    content.game_name = :game_name\n",
+        "    and (array_contains(:content_type, content.content_type) or array_contains(:content_type, 'All'))\n",
+        "    and sentiment.category = :category\n",
+        "    and timestamp >= :date_range.min\n",
+        "    and timestamp <= :date_range.max\n",
+        "  group by\n",
+        "    sub_category\n",
+        "  order by\n",
+        "    count(*) desc\n",
+        "  limit CASE\n",
+        "    WHEN :subTopicFilter = 'Top 10' THEN 10\n",
+        "    WHEN :subTopicFilter = 'Top 25' THEN 25\n",
+        "  END\n",
+        ")\n",
+        "select\n",
+        "  count(*) as num_of_contents,\n",
+        "  sentiment.sub_category,\n",
+        "  sentiment.category,\n",
+        "  sentiment.sentiment\n",
+        "from\n",
+        " feedback_content_sentiment_gold sentiment\n",
+        "    inner join feedback_content_gold as content\n",
+        "      on sentiment.content_id = content.content_id\n",
+        "    inner join x\n",
+        "      on sentiment.sub_category = x.sub_category\n",
+        "where\n",
+        "  content.game_name = :game_name\n",
+        "  and (array_contains(:content_type, content.content_type) or array_contains(:content_type, 'All'))\n",
+        "  and sentiment.category = :category\n",
+        "  and timestamp >= :date_range.min\n",
+        "  and timestamp<= :date_range.max\n",
+        "group by\n",
+        "  sentiment.sub_category,\n",
+        "  sentiment.category,\n",
+        "  sentiment.sentiment"
+      ],
+      "parameters": [
+        {
+          "displayName": "game_name",
+          "keyword": "game_name",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "Palia"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "category",
+          "keyword": "category",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "other"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "subTopicFilter",
+          "keyword": "subTopicFilter",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "Top 25"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "date_range",
+          "keyword": "date_range",
+          "dataType": "DATE",
+          "complexType": "RANGE",
+          "defaultSelection": {
+            "range": {
+              "dataType": "DATE",
+              "min": {
+                "value": "now-30d/d"
+              },
+              "max": {
+                "value": "now/d"
+              }
+            }
+          }
+        },
+        {
+          "displayName": "content_type",
+          "keyword": "content_type",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "Steam Review"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "fca51f69",
+      "displayName": "Top 5 Positive Categories",
+      "queryLines": [
+        "select\n",
+        "  sentiment.category,\n",
+        "  count(*) as num_neg_contents\n",
+        "from\n",
+        "  feedback_content_sentiment_gold sentiment\n",
+        "    inner join feedback_content_gold as content\n",
+        "      on sentiment.content_id = content.content_id\n",
+        "where\n",
+        "  sentiment.sentiment = \"positive\"\n",
+        "  and sentiment.game_name = :game_name\n",
+        "  and (array_contains(:content_type, content.content_type) or array_contains(:content_type, 'All'))\n",
+        "  and content.timestamp >= :date_range.min\n",
+        "  and content.timestamp <= :date_range.max\n",
+        "group by\n",
+        "  sentiment.category\n",
+        "order by\n",
+        "  count(*) desc\n",
+        "limit 5"
+      ],
+      "parameters": [
+        {
+          "displayName": "date_range",
+          "keyword": "date_range",
+          "dataType": "DATE",
+          "complexType": "RANGE",
+          "defaultSelection": {
+            "range": {
+              "dataType": "DATE",
+              "min": {
+                "value": "now/y"
+              },
+              "max": {
+                "value": "now/y"
+              }
+            }
+          }
+        },
+        {
+          "displayName": "content_type",
+          "keyword": "content_type",
+          "dataType": "STRING",
+          "complexType": "MULTI",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "Steam Review"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "game_name",
+          "keyword": "game_name",
+          "dataType": "STRING",
+          "defaultSelection": {
+            "values": {
+              "dataType": "STRING",
+              "values": [
+                {
+                  "value": "Palia"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "93b86851",
+      "displayName": "Param: Game",
+      "queryLines": [
+        "SELECT DISTINCT\n",
+        "  game_name\n",
+        "FROM\n",
+        " feedback_content_gold"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "db34b300",
+      "displayName": "Global Filters",
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS"
+    },
+    {
+      "name": "c2d7b8e7",
+      "displayName": "Overview",
+      "layout": [
+        {
+          "widget": {
+            "name": "8831b1ed",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ae839f8f",
+                  "fields": [
+                    {
+                      "name": "sentiment",
+                      "expression": "`sentiment`"
+                    },
+                    {
+                      "name": "count(*)",
+                      "expression": "COUNT(`*`)"
+                    },
+                    {
+                      "name": "category",
+                      "expression": "`category`"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`sentiment` IN ('negative', 'neutral', 'positive')"
+                    },
+                    {
+                      "expression": "`category` IN (`category`) OR TRUE"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "count(*)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Count of Records"
+                },
+                "y": {
+                  "fieldName": "category",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "axis": {
+                    "hideTitle": true
+                  },
+                  "displayName": "category"
+                },
+                "color": {
+                  "fieldName": "sentiment",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "positive",
+                        "color": "#99DDB4"
+                      },
+                      {
+                        "value": "Negative",
+                        "color": "#FCA4A1"
+                      },
+                      {
+                        "value": "negative",
+                        "color": "#FCA4A1"
+                      },
+                      {
+                        "value": "mixed",
+                        "color": "#919191"
+                      },
+                      {
+                        "value": "neutral",
+                        "color": "#919191"
+                      }
+                    ]
+                  },
+                  "displayName": "sentiment"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Sentiment by Category"
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 8,
+            "width": 4,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "006487b4",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "934739a7",
+                  "fields": [
+                    {
+                      "name": "category",
+                      "expression": "`category`"
+                    },
+                    {
+                      "name": "num_neg_contents",
+                      "expression": "`num_neg_contents`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "category",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100000,
+                    "title": "Category",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "num_neg_contents",
+                    "numberFormat": "0",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "integer",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 100001,
+                    "title": "num_neg_contents",
+                    "allowSearch": false,
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  }
+                ]
+              },
+              "invisibleColumns": [],
+              "allowHTMLByDefault": false,
+              "itemsPerPage": 25,
+              "paginationSize": "default",
+              "condensed": true,
+              "withRowNumber": false,
+              "frame": {
+                "title": "Top 5 Categories with Highest Negative Sentiment",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 15,
+            "width": 3,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "79b71b5c",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "fca51f69",
+                  "fields": [
+                    {
+                      "name": "category",
+                      "expression": "`category`"
+                    },
+                    {
+                      "name": "num_neg_contents",
+                      "expression": "`num_neg_contents`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "category",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 100000,
+                    "title": "Category",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "num_neg_contents",
+                    "numberFormat": "0",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "integer",
+                    "displayAs": "number",
+                    "visible": true,
+                    "order": 100001,
+                    "title": "num_neg_contents",
+                    "allowSearch": false,
+                    "alignContent": "right",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  }
+                ]
+              },
+              "invisibleColumns": [],
+              "allowHTMLByDefault": false,
+              "itemsPerPage": 25,
+              "paginationSize": "default",
+              "condensed": true,
+              "withRowNumber": false,
+              "frame": {
+                "title": "Top 5 Categories with Highest Positive Sentiment",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 15,
+            "width": 3,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "44a4e39e",
+            "queries": [
+              {
+                "name": "dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c1cbc4be4299e1db828_game_name",
+                "query": {
+                  "datasetName": "93b86851",
+                  "fields": [
+                    {
+                      "name": "game_name",
+                      "expression": "`game_name`"
+                    },
+                    {
+                      "name": "game_name_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81bbfb6197b371aa46a92_game_name",
+                "query": {
+                  "datasetName": "ae839f8f",
+                  "fields": [
+                    {
+                      "name": "game_name",
+                      "expression": "`game_name`"
+                    },
+                    {
+                      "name": "game_name_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c0eafb372b5d897ba69_game_name",
+                "query": {
+                  "datasetName": "796257f9",
+                  "fields": [
+                    {
+                      "name": "game_name",
+                      "expression": "`game_name`"
+                    },
+                    {
+                      "name": "game_name_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c238a1bd8a81fee5f7c_game_name",
+                "query": {
+                  "datasetName": "934739a7",
+                  "parameters": [
+                    {
+                      "name": "game_name",
+                      "keyword": "game_name"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c2c8876fcc976824aac_game_name",
+                "query": {
+                  "datasetName": "fca51f69",
+                  "parameters": [
+                    {
+                      "name": "game_name",
+                      "keyword": "game_name"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c4297d350ab9a850bf9_game_name",
+                "query": {
+                  "datasetName": "ce82824a",
+                  "parameters": [
+                    {
+                      "name": "game_name",
+                      "keyword": "game_name"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "game_name",
+                    "queryName": "dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c1cbc4be4299e1db828_game_name"
+                  },
+                  {
+                    "parameterName": "game_name",
+                    "queryName": "parameter_dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c238a1bd8a81fee5f7c_game_name"
+                  },
+                  {
+                    "parameterName": "game_name",
+                    "queryName": "parameter_dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c2c8876fcc976824aac_game_name"
+                  },
+                  {
+                    "parameterName": "game_name",
+                    "queryName": "parameter_dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c4297d350ab9a850bf9_game_name"
+                  },
+                  {
+                    "fieldName": "game_name",
+                    "queryName": "dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81bbfb6197b371aa46a92_game_name"
+                  },
+                  {
+                    "fieldName": "game_name",
+                    "queryName": "dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c0eafb372b5d897ba69_game_name"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Game"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "83349d28",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "796257f9",
+                  "fields": [
+                    {
+                      "name": "count(overall_sentiment)",
+                      "expression": "COUNT(`overall_sentiment`)"
+                    },
+                    {
+                      "name": "overall_sentiment",
+                      "expression": "`overall_sentiment`"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`overall_sentiment` IN ('negative', 'neutral', 'positive')"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "pie",
+              "encodings": {
+                "angle": {
+                  "fieldName": "count(overall_sentiment)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "hideTitle": true
+                  },
+                  "displayName": "Count of overall_sentiment"
+                },
+                "color": {
+                  "fieldName": "overall_sentiment",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "positive",
+                        "color": "#99DDB4"
+                      },
+                      {
+                        "value": "negative",
+                        "color": "#FCA4A1"
+                      },
+                      {
+                        "value": "mixed",
+                        "color": "#919191"
+                      },
+                      {
+                        "value": "neutral",
+                        "color": "#919191"
+                      }
+                    ]
+                  },
+                  "displayName": "overall_sentiment"
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "frame": {
+                "title": "Overall Sentiment",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 2,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "83d1ebc3",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "796257f9",
+                  "fields": [
+                    {
+                      "name": "overall_sentiment",
+                      "expression": "`overall_sentiment`"
+                    },
+                    {
+                      "name": "weekly(timestamp)",
+                      "expression": "DATE_TRUNC(\"WEEK\", `timestamp`)"
+                    },
+                    {
+                      "name": "count(*)",
+                      "expression": "COUNT(`*`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`overall_sentiment` IN ('negative', 'neutral', 'positive')"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "weekly(timestamp)",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "timestamp_created"
+                },
+                "y": {
+                  "fieldName": "count(*)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "# of Content"
+                },
+                "color": {
+                  "fieldName": "overall_sentiment",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "neutral",
+                        "color": "#919191"
+                      },
+                      {
+                        "value": "negative",
+                        "color": "#FCA4A1"
+                      },
+                      {
+                        "value": "null",
+                        "color": "#8BCAE7"
+                      },
+                      {
+                        "value": "positive",
+                        "color": "#99DDB4"
+                      }
+                    ]
+                  },
+                  "displayName": "overall_sentiment"
+                },
+                "label": {
+                  "show": false
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Overall Sentiment Over Time"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 1,
+            "width": 4,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "2af23ef5",
+            "queries": [
+              {
+                "name": "dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c0eafb372b5d897ba69_timestamp",
+                "query": {
+                  "datasetName": "796257f9",
+                  "fields": [
+                    {
+                      "name": "timestamp",
+                      "expression": "`timestamp`"
+                    },
+                    {
+                      "name": "timestamp_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81bbfb6197b371aa46a92_timestamp",
+                "query": {
+                  "datasetName": "ae839f8f",
+                  "fields": [
+                    {
+                      "name": "timestamp",
+                      "expression": "`timestamp`"
+                    },
+                    {
+                      "name": "timestamp_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c238a1bd8a81fee5f7c_date_range",
+                "query": {
+                  "datasetName": "934739a7",
+                  "parameters": [
+                    {
+                      "name": "date_range",
+                      "keyword": "date_range"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c2c8876fcc976824aac_date_range",
+                "query": {
+                  "datasetName": "fca51f69",
+                  "parameters": [
+                    {
+                      "name": "date_range",
+                      "keyword": "date_range"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-range-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "parameterName": "date_range",
+                    "queryName": "parameter_dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c238a1bd8a81fee5f7c_date_range"
+                  },
+                  {
+                    "parameterName": "date_range",
+                    "queryName": "parameter_dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c2c8876fcc976824aac_date_range"
+                  },
+                  {
+                    "fieldName": "timestamp",
+                    "queryName": "dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c0eafb372b5d897ba69_timestamp"
+                  },
+                  {
+                    "fieldName": "timestamp",
+                    "queryName": "dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81bbfb6197b371aa46a92_timestamp"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Time Created"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 0,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "78ac3646",
+            "queries": [
+              {
+                "name": "dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c4c9d6335145d31b6e0_content_type",
+                "query": {
+                  "datasetName": "38128c95",
+                  "fields": [
+                    {
+                      "name": "content_type",
+                      "expression": "`content_type`"
+                    },
+                    {
+                      "name": "content_type_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c238a1bd8a81fee5f7c_content_type",
+                "query": {
+                  "datasetName": "934739a7",
+                  "parameters": [
+                    {
+                      "name": "content_type",
+                      "keyword": "content_type"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c4297d350ab9a850bf9_content_type",
+                "query": {
+                  "datasetName": "ce82824a",
+                  "parameters": [
+                    {
+                      "name": "content_type",
+                      "keyword": "content_type"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c2c8876fcc976824aac_content_type",
+                "query": {
+                  "datasetName": "fca51f69",
+                  "parameters": [
+                    {
+                      "name": "content_type",
+                      "keyword": "content_type"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c0eafb372b5d897ba69_content_type",
+                "query": {
+                  "datasetName": "796257f9",
+                  "parameters": [
+                    {
+                      "name": "content_type",
+                      "keyword": "content_type"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81bbfb6197b371aa46a92_content_type",
+                "query": {
+                  "datasetName": "ae839f8f",
+                  "parameters": [
+                    {
+                      "name": "content_type",
+                      "keyword": "content_type"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "parameterName": "content_type",
+                    "queryName": "parameter_dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c238a1bd8a81fee5f7c_content_type"
+                  },
+                  {
+                    "parameterName": "content_type",
+                    "queryName": "parameter_dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c4297d350ab9a850bf9_content_type"
+                  },
+                  {
+                    "parameterName": "content_type",
+                    "queryName": "parameter_dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c2c8876fcc976824aac_content_type"
+                  },
+                  {
+                    "parameterName": "content_type",
+                    "queryName": "parameter_dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c0eafb372b5d897ba69_content_type"
+                  },
+                  {
+                    "parameterName": "content_type",
+                    "queryName": "parameter_dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81bbfb6197b371aa46a92_content_type"
+                  },
+                  {
+                    "fieldName": "content_type",
+                    "queryName": "dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c4c9d6335145d31b6e0_content_type"
+                  }
+                ]
+              },
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "STRING",
+                    "values": [
+                      {
+                        "value": "All"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "showDescription": false,
+                "title": "Content Type"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 0,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "2a6e9942",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "796257f9",
+                  "fields": [
+                    {
+                      "name": "overall_sentiment",
+                      "expression": "`overall_sentiment`"
+                    },
+                    {
+                      "name": "content_type",
+                      "expression": "`content_type`"
+                    },
+                    {
+                      "name": "count(overall_sentiment)",
+                      "expression": "COUNT(`overall_sentiment`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`overall_sentiment` IN ('negative', 'neutral', 'positive')"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "content_type",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "overall_sentiment"
+                },
+                "y": {
+                  "fieldName": "count(overall_sentiment)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "hideLabels": false
+                  },
+                  "displayName": "# of Content"
+                },
+                "color": {
+                  "fieldName": "overall_sentiment",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "negative",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 8
+                        }
+                      },
+                      {
+                        "value": "neutral",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 9
+                        }
+                      },
+                      {
+                        "value": "positive",
+                        "color": {
+                          "themeColorType": "visualizationColors",
+                          "position": 7
+                        }
+                      }
+                    ]
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "frame": {
+                "title": "Overall Sentiment by Content Type",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 8,
+            "width": 2,
+            "height": 7
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
+    },
+    {
+      "name": "fb65c9fa",
+      "displayName": "Category",
+      "layout": [
+        {
+          "widget": {
+            "name": "81359504",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ae839f8f",
+                  "fields": [
+                    {
+                      "name": "sentiment",
+                      "expression": "`sentiment`"
+                    },
+                    {
+                      "name": "weekly(timestamp)",
+                      "expression": "DATE_TRUNC(\"WEEK\", `timestamp`)"
+                    },
+                    {
+                      "name": "count(*)",
+                      "expression": "COUNT(`*`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`sentiment` IN ('negative', 'neutral', 'positive')"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "weekly(timestamp)",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "timestamp_created"
+                },
+                "y": {
+                  "fieldName": "count(*)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Count of Records"
+                },
+                "color": {
+                  "fieldName": "sentiment",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "neutral",
+                        "color": "#919191"
+                      },
+                      {
+                        "value": "negative",
+                        "color": "#FCA4A1"
+                      },
+                      {
+                        "value": "null",
+                        "color": "#8BCAE7"
+                      },
+                      {
+                        "value": "positive",
+                        "color": "#99DDB4"
+                      }
+                    ]
+                  },
+                  "displayName": "sentiment"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Category Sentiment Overtime"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 2,
+            "width": 4,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "94fa162a",
+            "queries": [
+              {
+                "name": "dashboards/01f0207183df136689a53f214b0ec931/datasets/01f02071a61a14eead6931a2a4009ab2_category",
+                "query": {
+                  "datasetName": "ae839f8f",
+                  "fields": [
+                    {
+                      "name": "category",
+                      "expression": "`category`"
+                    },
+                    {
+                      "name": "category_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f0207183df136689a53f214b0ec931/datasets/01f02c1bb62f196db9cc9ed1c09129ed_category",
+                "query": {
+                  "datasetName": "ce82824a",
+                  "parameters": [
+                    {
+                      "name": "category",
+                      "keyword": "category"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "category",
+                    "displayName": "category",
+                    "queryName": "dashboards/01f0207183df136689a53f214b0ec931/datasets/01f02071a61a14eead6931a2a4009ab2_category"
+                  },
+                  {
+                    "parameterName": "category",
+                    "queryName": "parameter_dashboards/01f0207183df136689a53f214b0ec931/datasets/01f02c1bb62f196db9cc9ed1c09129ed_category"
+                  }
+                ]
+              },
+              "disallowAll": true,
+              "frame": {
+                "showTitle": true,
+                "title": "Category"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "19bdd000",
+            "queries": [
+              {
+                "name": "dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c1cbc4be4299e1db828_game_name",
+                "query": {
+                  "datasetName": "93b86851",
+                  "fields": [
+                    {
+                      "name": "game_name",
+                      "expression": "`game_name`"
+                    },
+                    {
+                      "name": "game_name_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81bbfb6197b371aa46a92_game_name",
+                "query": {
+                  "datasetName": "ae839f8f",
+                  "fields": [
+                    {
+                      "name": "game_name",
+                      "expression": "`game_name`"
+                    },
+                    {
+                      "name": "game_name_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "game_name",
+                    "queryName": "dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c1cbc4be4299e1db828_game_name"
+                  },
+                  {
+                    "fieldName": "game_name",
+                    "queryName": "dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81bbfb6197b371aa46a92_game_name"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Game"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "73a33ad2",
+            "queries": [
+              {
+                "name": "dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81bbfb6197b371aa46a92_timestamp",
+                "query": {
+                  "datasetName": "ae839f8f",
+                  "fields": [
+                    {
+                      "name": "timestamp",
+                      "expression": "`timestamp`"
+                    },
+                    {
+                      "name": "timestamp_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-range-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "timestamp",
+                    "queryName": "dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81bbfb6197b371aa46a92_timestamp"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Time Created"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 0,
+            "width": 3,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "ace510d2",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ae839f8f",
+                  "fields": [
+                    {
+                      "name": "count(*)",
+                      "expression": "COUNT(`*`)"
+                    },
+                    {
+                      "name": "sentiment",
+                      "expression": "`sentiment`"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`sentiment` IN ('negative', 'neutral', 'positive')"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "pie",
+              "encodings": {
+                "angle": {
+                  "fieldName": "count(*)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "hideTitle": true
+                  },
+                  "displayName": "Count of Records"
+                },
+                "color": {
+                  "fieldName": "sentiment",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "positive",
+                        "color": "#99DDB4"
+                      },
+                      {
+                        "value": "negative",
+                        "color": "#FCA4A1"
+                      },
+                      {
+                        "value": "mixed",
+                        "color": "#919191"
+                      },
+                      {
+                        "value": "neutral",
+                        "color": "#919191"
+                      }
+                    ]
+                  },
+                  "displayName": "sentiment"
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "frame": {
+                "title": "Category Sentiment",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 2,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "2b75d75c",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ae839f8f",
+                  "fields": [
+                    {
+                      "name": "category",
+                      "expression": "`category`"
+                    },
+                    {
+                      "name": "sub_category",
+                      "expression": "`sub_category`"
+                    },
+                    {
+                      "name": "sentiment",
+                      "expression": "`sentiment`"
+                    },
+                    {
+                      "name": "ai_summary",
+                      "expression": "`ai_summary`"
+                    },
+                    {
+                      "name": "content_type",
+                      "expression": "`content_type`"
+                    },
+                    {
+                      "name": "translated_content_text",
+                      "expression": "`translated_content_text`"
+                    },
+                    {
+                      "name": "content_text",
+                      "expression": "`content_text`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "category",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 0,
+                    "title": "category",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "sub_category",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 2,
+                    "title": "sub_category",
+                    "allowSearch": true,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "sentiment",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 3,
+                    "title": "sentiment",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "ai_summary",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 5,
+                    "title": "ai_summary",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "content_type",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 6,
+                    "title": "content_type",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "translated_content_text",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 7,
+                    "title": "translated_content_text",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  },
+                  {
+                    "fieldName": "content_text",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "imageUrlTemplate": "{{ @ }}",
+                    "imageTitleTemplate": "{{ @ }}",
+                    "imageWidth": "",
+                    "imageHeight": "",
+                    "linkUrlTemplate": "{{ @ }}",
+                    "linkTextTemplate": "{{ @ }}",
+                    "linkTitleTemplate": "{{ @ }}",
+                    "linkOpenInNewTab": true,
+                    "type": "string",
+                    "displayAs": "string",
+                    "visible": true,
+                    "order": 8,
+                    "title": "content_text",
+                    "allowSearch": false,
+                    "alignContent": "left",
+                    "allowHTML": false,
+                    "highlightLinks": false,
+                    "useMonospaceFont": false,
+                    "preserveWhitespace": false
+                  }
+                ]
+              },
+              "invisibleColumns": [
+                {
+                  "booleanValues": [
+                    "false",
+                    "true"
+                  ],
+                  "imageUrlTemplate": "{{ @ }}",
+                  "imageTitleTemplate": "{{ @ }}",
+                  "imageWidth": "",
+                  "imageHeight": "",
+                  "linkUrlTemplate": "{{ @ }}",
+                  "linkTextTemplate": "{{ @ }}",
+                  "linkTitleTemplate": "{{ @ }}",
+                  "linkOpenInNewTab": true,
+                  "name": "game_name",
+                  "type": "string",
+                  "displayAs": "string",
+                  "order": 1,
+                  "title": "game_name",
+                  "allowSearch": false,
+                  "alignContent": "left",
+                  "allowHTML": false,
+                  "highlightLinks": false,
+                  "useMonospaceFont": false,
+                  "preserveWhitespace": false
+                },
+                {
+                  "booleanValues": [
+                    "false",
+                    "true"
+                  ],
+                  "imageUrlTemplate": "{{ @ }}",
+                  "imageTitleTemplate": "{{ @ }}",
+                  "imageWidth": "",
+                  "imageHeight": "",
+                  "linkUrlTemplate": "{{ @ }}",
+                  "linkTextTemplate": "{{ @ }}",
+                  "linkTitleTemplate": "{{ @ }}",
+                  "linkOpenInNewTab": true,
+                  "name": "overall_sentiment",
+                  "type": "string",
+                  "displayAs": "string",
+                  "order": 4,
+                  "title": "overall_sentiment",
+                  "allowSearch": false,
+                  "alignContent": "left",
+                  "allowHTML": false,
+                  "highlightLinks": false,
+                  "useMonospaceFont": false,
+                  "preserveWhitespace": false
+                },
+                {
+                  "dateTimeFormat": "DD/MM/YYYY HH:mm:ss.SSS",
+                  "booleanValues": [
+                    "false",
+                    "true"
+                  ],
+                  "imageUrlTemplate": "{{ @ }}",
+                  "imageTitleTemplate": "{{ @ }}",
+                  "imageWidth": "",
+                  "imageHeight": "",
+                  "linkUrlTemplate": "{{ @ }}",
+                  "linkTextTemplate": "{{ @ }}",
+                  "linkTitleTemplate": "{{ @ }}",
+                  "linkOpenInNewTab": true,
+                  "name": "timestamp",
+                  "type": "datetime",
+                  "displayAs": "datetime",
+                  "order": 9,
+                  "title": "timestamp",
+                  "allowSearch": false,
+                  "alignContent": "right",
+                  "allowHTML": false,
+                  "highlightLinks": false,
+                  "useMonospaceFont": false,
+                  "preserveWhitespace": false
+                }
+              ],
+              "allowHTMLByDefault": false,
+              "itemsPerPage": 25,
+              "paginationSize": "default",
+              "condensed": true,
+              "withRowNumber": false
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 17,
+            "width": 6,
+            "height": 17
+          }
+        },
+        {
+          "widget": {
+            "name": "ace70229",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ae839f8f",
+                  "fields": [
+                    {
+                      "name": "sentiment",
+                      "expression": "`sentiment`"
+                    },
+                    {
+                      "name": "sub_category",
+                      "expression": "`sub_category`"
+                    },
+                    {
+                      "name": "count(*)",
+                      "expression": "COUNT(`*`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sub_category",
+                  "scale": {
+                    "type": "categorical",
+                    "categorySize": {
+                      "type": "number-of-categories",
+                      "number": 10
+                    },
+                    "sort": {
+                      "by": "y-reversed"
+                    }
+                  },
+                  "axis": {
+                    "labelAngle": 0
+                  },
+                  "displayName": "sub_category"
+                },
+                "y": {
+                  "fieldName": "count(*)",
+                  "scale": {
+                    "type": "quantitative",
+                    "reverse": false
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "sentiment",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "positive",
+                        "color": "#99DDB4"
+                      },
+                      {
+                        "value": "neutral",
+                        "color": "#919191"
+                      },
+                      {
+                        "value": "negative",
+                        "color": "#FCA4A1"
+                      },
+                      {
+                        "value": null,
+                        "color": "#077A9D"
+                      }
+                    ]
+                  },
+                  "displayName": "sentiment"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Top Sub Topics"
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "98a10405",
+            "queries": [
+              {
+                "name": "dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c4c9d6335145d31b6e0_content_type",
+                "query": {
+                  "datasetName": "38128c95",
+                  "fields": [
+                    {
+                      "name": "content_type",
+                      "expression": "`content_type`"
+                    },
+                    {
+                      "name": "content_type_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c0eafb372b5d897ba69_content_type",
+                "query": {
+                  "datasetName": "796257f9",
+                  "parameters": [
+                    {
+                      "name": "content_type",
+                      "keyword": "content_type"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81bbfb6197b371aa46a92_content_type",
+                "query": {
+                  "datasetName": "ae839f8f",
+                  "parameters": [
+                    {
+                      "name": "content_type",
+                      "keyword": "content_type"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "content_type",
+                    "queryName": "dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c4c9d6335145d31b6e0_content_type"
+                  },
+                  {
+                    "parameterName": "content_type",
+                    "queryName": "parameter_dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81c0eafb372b5d897ba69_content_type"
+                  },
+                  {
+                    "parameterName": "content_type",
+                    "queryName": "parameter_dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81bbfb6197b371aa46a92_content_type"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Content"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 1,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "79c8fd42",
+            "multilineTextboxSpec": {
+              "lines": [
+                "<span style=\"font-size: 24px;\">**Content Details**</span>"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 16,
+            "width": 6,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "31d87e38",
+            "queries": [
+              {
+                "name": "dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81bbfb6197b371aa46a92_sentiment",
+                "query": {
+                  "datasetName": "ae839f8f",
+                  "fields": [
+                    {
+                      "name": "sentiment",
+                      "expression": "`sentiment`"
+                    },
+                    {
+                      "name": "sentiment_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "sentiment",
+                    "queryName": "dashboards/01f0a080cf061122a0a6f83821145809/datasets/01f0ac40fdb81bbfb6197b371aa46a92_sentiment"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Sentiment"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 1,
+            "width": 2,
+            "height": 1
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "genieSpace": {
+      "isEnabled": false
+    }
+  }
+}

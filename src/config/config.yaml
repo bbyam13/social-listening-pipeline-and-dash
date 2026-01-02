@@ -1,0 +1,7 @@
+secrets:
+  scope_name: "social_listening_app"
+  keys:
+    reddit:
+      client_id: "reddit_client_id"
+      client_secret: "reddit_client_secret"
+      user_agent: "reddit_user_agent"

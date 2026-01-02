@@ -1,0 +1,31 @@
+bundle:
+  name: games_social_listening
+  uuid: b49905e1-a9e6-423c-a468-3ff7f05036f1
+
+include:
+  - resources/*.yml
+  - resources/*/*.yml
+
+# Variable declarations. These variables are assigned in the dev/prod targets below.
+variables:
+  catalog:
+    description: The catalog to use
+  schema:
+    description: The schema to use
+  warehouse_id:
+    description: warehouse for reporting
+  prefix:
+    description: prefix for all asset display names
+
+targets:
+  dev:
+    mode: production
+    default: true
+    workspace:
+      host: https://WORKSPACE_URL
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      catalog: bbyam_demo
+      schema: player_feedback_wildlight
+      warehouse_id: WAREHOUSEID
+      prefix: wildlight
