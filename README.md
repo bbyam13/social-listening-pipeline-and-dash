@@ -21,30 +21,7 @@ The main orchestration job that runs the complete data pipeline from ingestion t
 **Schedule:** Daily at 8:00 AM ET (paused by default)
 
 **Tasks:**
-
-```
-┌─────────────────────┐
-│  pull_source_content │  ← Ingests content from gaming platforms
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│ sentiment-extraction │  ← Runs the DLT pipeline
-└──────────┬──────────┘
-           │
-     ┌─────┴─────┐
-     │           │
-     ▼           ▼
-┌──────────┐  ┌─────────────────┐
-│new_game  │  │refresh_dashboard│  ← Updates dashboard
-│  _check  │  └─────────────────┘
-└────┬─────┘
-     │ (if update_type == NEW_GAME)
-     ▼
-┌─────────────────────┐
-│ summary_report_gen  │  ← Generates AI summary report
-└─────────────────────┘
-```
+<img width="1970" height="510" alt="image" src="https://github.com/user-attachments/assets/ddbec373-4352-4d27-83d9-09c9635470ac" />
 
 | Task | Type | Description |
 |------|------|-------------|
@@ -109,38 +86,11 @@ A standalone job that generates weekly summary reports for all tracked games.
 
 #### Sentiment Extraction Pipeline (`Games_Social_Listening_Demo_Pipeline`)
 
-A serverless Delta Live Tables (DLT) pipeline that processes player feedback through 4 transformation stages.
+A Lakeflow Declarative pipeline that processes player feedback through 4 transformation stages.
 
 **Pipeline Flow:**
 
-```
-feedback_content_bronze (source)
-           │
-           ▼
-┌─────────────────────────────┐
-│  01_ai_translation.py       │
-│ feedback_content_translated │  ← Translates content to English using AI Query
-└──────────────┬──────────────┘
-               │
-               ▼
-┌─────────────────────────────┐
-│  02_ai_sentiment_extraction │
-│ feedback_content_ai_extract │  ← Extracts sentiment & topics using AI Query
-└──────────────┬──────────────┘
-               │
-               ▼
-┌─────────────────────────────┐
-│  03_parse_sentiment.py      │
-│  feedback_content_parsed    │  ← Parses JSON into structured columns
-└──────────────┬──────────────┘
-               │
-               ▼
-┌─────────────────────────────┐
-│  04_reporting_layer.py      │
-│  feedback_content_gold      │  ← Final gold tables for reporting
-│  feedback_content_sentiment │
-└─────────────────────────────┘
-```
+<img width="1848" height="502" alt="image" src="https://github.com/user-attachments/assets/2926c230-02b7-4426-9167-de3dcc2e0455" />
 
 **Transformation Stages:**
 
@@ -151,23 +101,12 @@ feedback_content_bronze (source)
 | **03 - Parse Sentiment** | `feedback_content_parsed` | Parses the JSON output from the LLM into structured columns with data quality expectations |
 | **04 - Reporting Layer** | `feedback_content_gold`, `feedback_content_sentiment_gold` | Creates final denormalized tables optimized for dashboard queries |
 
-**Sentiment Categories Analyzed:**
-- Gameplay Mechanics
-- Graphics & Visuals
-- Performance & Stability
-- Monetization
-- Community & Social
-- Content & Updates
-- Audio & Sound
-- Story & Narrative
-
 ---
 
 ### Dashboard
 
-| Dashboard | Description |
-|-----------|-------------|
-| **Social Listening Dashboard** | Interactive Lakeview dashboard for exploring player feedback and sentiment trends across games and platforms |
+<img width="3046" height="1204" alt="image" src="https://github.com/user-attachments/assets/5eb34bda-b37d-444d-8525-512edd563c67" />
+
 
 ## Prerequisites
 
