@@ -18,14 +18,15 @@ variables:
     description: prefix for all asset display names
 
 targets:
-  dev:
+  demo:
     mode: production
     default: true
     workspace:
       host: https://WORKSPACE_URL
       root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
-    variables:
-      catalog: bbyam_demo
-      schema: player_feedback_wildlight
-      warehouse_id: WAREHOUSEID
-      prefix: wildlight
+    # By default, variables will be populated from CLI arguments in RUN ME file, but can be populated here for prod use
+    #variables:
+    #  catalog: bbyam_demo
+    #  schema: player_feedback_wildlight
+    #  warehouse_id: WAREHOUSEID
+    #  prefix: wildlight

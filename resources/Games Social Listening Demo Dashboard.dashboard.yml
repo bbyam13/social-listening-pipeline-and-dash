@@ -4,3 +4,5 @@ resources:
       display_name: ${var.prefix} - Games Social Listening Dashboard
       file_path: ../src/Games Social Listening Dashboard.lvdash.json
       warehouse_id: ${var.warehouse_id}
+      dataset_catalog: ${var.catalog}
+      dataset_schema: ${var.schema}
