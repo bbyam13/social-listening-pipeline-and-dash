@@ -163,14 +163,7 @@ CREATE CATALOG IF NOT EXISTS social_listening;
 CREATE SCHEMA IF NOT EXISTS social_listening.player_feedback;
 ```
 
-Or use an existing catalog and create just the schema:
-
-```sql
--- Using an existing catalog (e.g., 'main')
-CREATE SCHEMA IF NOT EXISTS main.social_listening;
-```
-
-> **Note:** You'll need appropriate permissions to create catalogs/schemas. Contact your workspace admin if needed.
+Or use an existing catalog and create just the schema
 
 ### Step 4: Configure Bundle Variables
 
@@ -241,7 +234,7 @@ Check deployed resources in your Databricks workspace:
 
 ### Step 9: Run the Job to Create Tables
 
-Before configuring the dashboard, run the orchestration job to ingest content and create the required tables.
+Run the orchestration job to ingest content and create the required tables.
 
 **Quick Start - Run with default parameters:**
 
