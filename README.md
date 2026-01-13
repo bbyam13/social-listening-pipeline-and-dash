@@ -262,19 +262,6 @@ To add a different game, provide custom parameters:
 
 Wait for the job to complete successfully (this may take 10-15 minutes).
 
-### Step 10: Configure Dashboard Data Sources
-
-> ⚠️ **Note:** Dashboard data sources cannot be dynamically set via DABs yet (coming soon). You must manually configure them.
-
-1. Open the deployed dashboard in your Databricks workspace
-2. Click **Edit** to enter edit mode
-3. Go to the **Data** tab
-4. For each data source/dataset:
-   - Click on the dataset
-   - Update the **catalog** and **schema** to match your configuration (e.g., `your_catalog.your_schema`)
-5. Click **Publish** to save changes
-
-
 ## Updating the Bundle
 
 After making changes to source files or configuration:
